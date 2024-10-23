@@ -1,6 +1,6 @@
 from typing import List
 from tictactoeutils import Classifier
-from aiplayers import Player, Difficulty, BaseAIPlayer, RandomAIPlayer
+from aiplayers import Player, Difficulty, BaseAIPlayer, MinimaxAIPlayer
 
 # Tic-tac-toe board
 board: List[List[Player]] = [[Player.EMPTY for _ in range(3)] for _ in range(3)]
@@ -15,7 +15,7 @@ def main(ai_player: BaseAIPlayer) -> None:
 
     result: str = c.ONGOING
     while result == c.ONGOING:
-        flush_terminal()
+        #flush_terminal()
         show_board()
         user_plays()
         board  = ai_player.play(difficulty, board)
@@ -23,8 +23,8 @@ def main(ai_player: BaseAIPlayer) -> None:
 
     show_board()
     print("GAME OVER! Result: " + 
-        result.replace(Player.X.value, Player.X.name).
-               replace(Player.O.value, Player.O.name)
+               result.replace(Player.O.value, Player.O.name).
+                      replace(Player.X.value, Player.X.name)
     )
 
 def show_menu() -> None:
@@ -86,4 +86,4 @@ def flush_terminal() -> None:
     os.system('cls||clear')
 
 if __name__ == '__main__':
-    main(RandomAIPlayer()) # TODO: add AI player implementation
+    main(MinimaxAIPlayer())
