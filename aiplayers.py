@@ -11,14 +11,23 @@ class Player(Enum):
     X     =  '1'
     O     = '-1'
 
+class Difficulty(Enum):
+    '''
+    Enum for AI difficulty levels. The values of the enum indicate the percentage of the time
+    the AI will make a random move.
+    '''
+    EASY   = 0.75
+    MEDIUM = 0.5
+    HARD   = 0.0
+
 class BaseAIPlayer(ABC):
     '''Abstract class for an AI player.'''
     @abstractmethod
-    def play(board: List[List[Player]]) -> List[List[Player]]: pass
+    def play(difficulty: Difficulty, board: List[List[Player]]) -> List[List[Player]]: pass
 
 class RandomAIPlayer(BaseAIPlayer):
     '''AI player that makes random moves.'''
-    def play(self, board: List[List[Player]]) -> List[List[Player]]:
+    def play(difficulty: Difficulty, board: List[List[Player]]) -> List[List[Player]]:
         empty_cells = [(r, c) for r in range(3) for c in range(3) if board[r][c] == Player.EMPTY]
         if empty_cells:
             r, c = random.choice(empty_cells)
