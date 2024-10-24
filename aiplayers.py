@@ -25,7 +25,12 @@ class Difficulty(Enum):
 class BaseAIPlayer(ABC):
     '''Abstract class for an AI player.'''
     @abstractmethod
-    def play(self, difficulty: Difficulty, board: List[List[Player]]) -> List[List[Player]]: pass
+    def play(self, difficulty: Difficulty, board: List[List[Player]]) -> List[List[Player]]:
+        '''
+        Makes the AI player do the next move on the given board with the requested difficulty.
+        difficulty.value represents the probability with which the AI player should play randomly.
+        '''
+        pass
 
 class RandomAIPlayer(BaseAIPlayer):
     '''AI player that makes random moves.'''
@@ -47,11 +52,13 @@ class MinimaxAIPlayer(BaseAIPlayer):
             return RandomAIPlayer().play(difficulty, board)
         
         # use minimax to find the best move
-        board_str: List[List[str]] = self._to_string_list(board)
+        board_str: List[List[str]] = board_to_string_list(board)
+
         candidate_moves: List[List[List[str]]] = self._candidates(board_str, Player.O.value)
         if not candidate_moves: return board # no more moves to make
         new_board: List[List[str]] = max(candidate_moves, key=lambda b: self._minimax(b, False))
-        return self._to_player_list(new_board)
+
+        return board_to_player_list(new_board)
     
     def _minimax(self, board: List[List[str]], maximizing=False) -> float:
         '''Applies the Minimax algorithm on the given board, returning the best value.'''      
@@ -84,36 +91,36 @@ class MinimaxAIPlayer(BaseAIPlayer):
 
     def _evaluate(self, board: List[List[str]]) -> int:
         '''Returns the evaluation of the board.'''
-        if self._classifier.is_winner(self._to_string(board), Player.O.value):
+        if self._classifier.is_winner(board_to_string(board), Player.O.value):
             return 1
-        if self._classifier.is_winner(self._to_string(board), Player.X.value):
+        if self._classifier.is_winner(board_to_string(board), Player.X.value):
             return -1
         return 0
 
-    def _to_string(self, board: List[List[str]]) -> str:
-        '''Converts the board to a string.'''
-        return ','.join(cell for row in board for cell in row)
-    
-    def _to_string_list(self, board: List[List[Player]]) -> List[List[str]]:
-        '''Converts the list of lists board into a list of lists of strings.'''
-        result: List[List[str]] = []
-        for row in board:
-            result.append([cell.value for cell in row])
-        return result
-    
-    def _to_player_list(self, board: List[List[str]]) -> List[List[Player]]:
-        '''Converts the list of lists of strings into a list of lists of players.'''
-        result: List[List[Player]] = []
-        value_to_player= {
-            Player.EMPTY.value: Player.EMPTY,
-            Player.X.value:     Player.X,
-            Player.O.value:     Player.O
-        }
-        for row in board:
-            result.append([value_to_player[cell] for cell in row])
-        return result
-
     def _is_terminal(self, board: List[List[str]]):
         '''Returns True if the game ended; False otherwise.'''
-        board_str: str = self._to_string(board)
+        board_str: str = board_to_string(board)
         return self._classifier.is_winner(board_str, Player.O.value) or self._classifier.is_winner(board_str, Player.X.value) or self._classifier.is_tie(board_str)
+
+def board_to_string(board: List[List[str]]) -> str:
+    '''Converts the board to a string.'''
+    return ','.join(cell for row in board for cell in row)
+
+def board_to_string_list(board: List[List[Player]]) -> List[List[str]]:
+    '''Converts the list of lists board into a list of lists of strings.'''
+    result: List[List[str]] = []
+    for row in board:
+        result.append([cell.value for cell in row])
+    return result
+
+def board_to_player_list(board: List[List[str]]) -> List[List[Player]]:
+    '''Converts the list of lists of strings into a list of lists of players.'''
+    result: List[List[Player]] = []
+    value_to_player= {
+        Player.EMPTY.value: Player.EMPTY,
+        Player.X.value:     Player.X,
+        Player.O.value:     Player.O
+    }
+    for row in board:
+        result.append([value_to_player[cell] for cell in row])
+    return result

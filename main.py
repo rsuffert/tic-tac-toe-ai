@@ -23,8 +23,8 @@ def main(ai_player: BaseAIPlayer) -> None:
 
     show_board()
     print("GAME OVER! Result: " + 
-               result.replace(Player.O.value, Player.O.name).
-                      replace(Player.X.value, Player.X.name)
+        result.replace(Player.O.value, Player.O.name).
+                replace(Player.X.value, Player.X.name)
     )
 
 def show_menu() -> None:
