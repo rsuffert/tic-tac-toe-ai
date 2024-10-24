@@ -53,7 +53,8 @@ class MinimaxAIPlayer(BaseAIPlayer):
         new_board: List[List[str]] = max(candidate_moves, key=lambda b: self._minimax(b, False))
         return self._to_player_list(new_board)
     
-    def _minimax(self, board: List[List[str]], maximizing=False) -> float:        
+    def _minimax(self, board: List[List[str]], maximizing=False) -> float:
+        '''Applies the Minimax algorithm on the given board, returning the best value.'''      
         if self._is_terminal(board):
             return self._evaluate(board)
         if maximizing:
