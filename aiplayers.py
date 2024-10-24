@@ -46,12 +46,14 @@ class MinimaxAIPlayer(BaseAIPlayer):
         if rnd <= difficulty.value * 10:
             return RandomAIPlayer().play(difficulty, board)
         
+        # use minimax to find the best move
         board_str: List[List[str]] = self._to_string_list(board)
         candidate_moves: List[List[List[str]]] = self._candidates(board_str, Player.O.value)
+        if not candidate_moves: return board # no more moves to make
         new_board: List[List[str]] = max(candidate_moves, key=lambda b: self._minimax(b, False))
         return self._to_player_list(new_board)
     
-    def _minimax(self, board: List[List[str]], maximizing=False) -> int:        
+    def _minimax(self, board: List[List[str]], maximizing=False) -> float:        
         if self._is_terminal(board):
             return self._evaluate(board)
         if maximizing:
@@ -70,7 +72,7 @@ class MinimaxAIPlayer(BaseAIPlayer):
 
         for i in range(len(board)):
             for j in range(len(board)):
-                if board[i][j] != ' ':
+                if board[i][j] != Player.EMPTY.value:
                     continue
 
                 candidate = deepcopy(board)
@@ -95,14 +97,19 @@ class MinimaxAIPlayer(BaseAIPlayer):
         '''Converts the list of lists board into a list of lists of strings.'''
         result: List[List[str]] = []
         for row in board:
-            result.append([' ' if cell == Player.EMPTY else cell.name for cell in row])
+            result.append([cell.value for cell in row])
         return result
     
     def _to_player_list(self, board: List[List[str]]) -> List[List[Player]]:
         '''Converts the list of lists of strings into a list of lists of players.'''
         result: List[List[Player]] = []
+        value_to_player= {
+            Player.EMPTY.value: Player.EMPTY,
+            Player.X.value:     Player.X,
+            Player.O.value:     Player.O
+        }
         for row in board:
-            result.append([Player.EMPTY if cell == ' ' else Player.X if cell == 'X' else Player.O for cell in row])
+            result.append([value_to_player[cell] for cell in row])
         return result
 
     def _is_terminal(self, board: List[List[str]]):

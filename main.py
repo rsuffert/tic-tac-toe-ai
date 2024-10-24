@@ -4,7 +4,7 @@ from aiplayers import Player, Difficulty, BaseAIPlayer, MinimaxAIPlayer
 
 # Tic-tac-toe board
 board: List[List[Player]] = [[Player.EMPTY for _ in range(3)] for _ in range(3)]
-difficulty: Difficulty = None
+difficulty: Difficulty = Difficulty.EASY
 
 def main(ai_player: BaseAIPlayer) -> None:
     '''Entry point for the program.'''
@@ -15,7 +15,7 @@ def main(ai_player: BaseAIPlayer) -> None:
 
     result: str = c.ONGOING
     while result == c.ONGOING:
-        #flush_terminal()
+        flush_terminal()
         show_board()
         user_plays()
         board  = ai_player.play(difficulty, board)
