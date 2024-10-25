@@ -68,14 +68,14 @@ class MinimaxAIPlayer(BaseAIPlayer):
             value = float("-inf")
             for child in self._candidates(board, Player.O.value):
                 value = max(value, self._minimax(child, False))
+                if value >= beta: break
                 alpha = max(alpha, value)
-                if alpha >= beta: break
         else:
             value = float("+inf")
             for child in self._candidates(board, Player.X.value):
                 value = min(value, self._minimax(child, True))
+                if value <= alpha: break
                 beta = min(beta, value)
-                if alpha >= beta: break
         return value
 
     def _candidates(self, board: List[List[str]], player: str) -> List[List[List[str]]]:
