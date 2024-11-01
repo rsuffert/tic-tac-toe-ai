@@ -32,6 +32,7 @@ class Neuron:
 
 if __name__ == "__main__":
     def test_neuron():
+        print("============ TESTING NEURON ============")
         weights = [0.5, -0.6, 0.1]
         inputs = [1.0, 2.0]
         neuron = Neuron(weights)
@@ -42,5 +43,7 @@ if __name__ == "__main__":
         assert abs(output_logistic - expected_logistic) < 1e-6, f"Expected {expected_logistic}, got {output_logistic}"
 
         print("All tests passed.")
+        print("========================================")
     
+    print("Running unit tests...")
     test_neuron()
