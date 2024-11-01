@@ -16,5 +16,6 @@ To initialize the program's CLI, you should run the `main.py` file.
 ├── aiplayers.py       # the machine (AI) players implementations
 ├── main.py            # the program's CLI implementation
 ├── tictactoeutils.py  # classifier and generator for Tic Tac Toe boards
+├── neural_network.py  # neural network implementation for Tic Tac Toe
 └── README.md
 ```
