@@ -1,6 +1,7 @@
+# neural_network
 import json
 from math import exp
-from typing import Callable, List, Tuple  # neural_network
+from typing import Callable, List, Tuple
 
 ActivationFunc = Callable[[float], float]
 
@@ -37,71 +38,81 @@ class Neuron:
         return f(sum([i * w for i, w in zip(inputs, self.weights)]))
 
 
-def test_neuron():
-    print("============ TESTING NEURON ============")
-    weights = [0.5, -0.6, 0.1]
-    inputs = [1.0, 2.0]
-    neuron = Neuron(weights)
-
-    # Test with logistic function
-    output_logistic = neuron.propagate(inputs, logistic_func)
-    expected_logistic = logistic_func(0.5 * 1 + -0.6 * 1.0 + 0.1 * 2.0)
-    assert (
-        abs(output_logistic - expected_logistic) < 1e-6
-    ), f"Expected {expected_logistic}, got {output_logistic}"
-
-    print("All tests passed.")
-    print("========================================")
-
-
 class NeuralNetwork:
     """
-    Classe NeuralNetwork
-    network: Representação da rede neural. Cada sub-lista representa uma camada da rede e cada elemento de uma sub-lista é um neurônio da respectiva camada.
+    Class NeuralNetwork
+    network: Representation of the neural network. Each sublist represents a layer of the network and each element of a sublist is a neuron of the respective layer.
     """
 
-    def __init__(
-        self, topology: Tuple[int, ...], weights: List[List[List[float]]]
-    ) -> None:
+    def __init__(self, topology: Tuple[int, ...], weights: List[float]) -> None:
         """
-        Construtor de rede neural, que recebe uma tupla de inteiros que representa a topologia da rede desejada e os pesos a serem aplicados aos neurônios.
+        Initializes a fully connected neural network with the given topology
+        (including input and output layers) and weights.
         """
-        self.network = []
-        for layer_size, layer_weights in zip(topology, weights):
-            layer = [Neuron(neuron_weights) for neuron_weights in layer_weights]
+        self._validate(topology, weights)
+
+        self.network: List[List[Neuron]] = []
+
+        used_weights: int = 0
+        for prev_layer_size, cur_layer_size in zip(topology[:-1], topology[1:]):
+            synapses_per_neuron: int = prev_layer_size + 1  # + 1 for bias
+            layer: List[Neuron] = [
+                Neuron(
+                    weights[
+                        used_weights + n * synapses_per_neuron : used_weights
+                        + (n + 1) * synapses_per_neuron
+                    ]
+                )
+                for n in range(cur_layer_size)
+            ]
+            used_weights += synapses_per_neuron * cur_layer_size
             self.network.append(layer)
 
+    @staticmethod
+    def _validate(topology: Tuple[int, ...], weights: List[float]) -> None:
+        """
+        Validates the topology and weights of the network, making sure the number of weights matches
+        the number of synapses in the network. It raises a ValueError if the validation fails.
+        """
+        if len(topology) < 2:
+            raise ValueError(
+                "The topology must have at least two layers (input and output)."
+            )
+
+        synapses_per_layer: List[int] = [
+            (topology[i] + 1) * topology[i + 1] for i in range(len(topology) - 1)
+        ]
+
+        if sum(synapses_per_layer) != len(weights):
+            raise ValueError(
+                f"Expected {sum(synapses_per_layer)} weights, got {len(weights)}."
+            )
+
     def predict(self, board: List[List[float]]) -> Tuple[int, int]:
-        """
-        Recebe uma instância de tabuleiro e retorna uma tupla representando a linha e coluna na qual a rede está jogando.
-        """
         inputs = [cell for row in board for cell in row]
         for layer in self.network:
             outputs = [neuron.propagate(inputs) for neuron in layer]
             inputs = outputs
-        # Assuming the output is a flat list of probabilities for each cell
         max_index = outputs.index(max(outputs))
         return divmod(max_index, len(board))
 
     def to_file(self, file_path: str) -> None:
-        """
-        Salva o modelo em um arquivo.
-        """
         model = {
-            "topology": [len(layer) for layer in self.network],
+            "topology": [len(self.network[0][0].weights) - 1]
+            + [len(layer) for layer in self.network],
             "weights": [
-                [[weight for weight in neuron.weights] for neuron in layer]
+                weight
                 for layer in self.network
+                for neuron in layer
+                for weight in neuron.weights
             ],
         }
+
         with open(file_path, "w") as f:
             json.dump(model, f)
 
     @classmethod
     def from_file(cls, file_path: str) -> "NeuralNetwork":
-        """
-        Lê o modelo e instancia a rede.
-        """
         with open(file_path, "r") as f:
             model = json.load(f)
         topology = tuple(model["topology"])
@@ -111,20 +122,45 @@ class NeuralNetwork:
 
 if __name__ == "__main__":
     print("Running unit tests...")
-    test_neuron()
 
-    topology = (9, 5, 9)
-    weights = [
-        [
-            [0.1] * 10 for _ in range(5)
-        ],  # 5 neurons, each with 10 weights (9 inputs + 1 bias)
-        [
-            [0.1] * 6 for _ in range(9)
-        ],  # 9 neurons, each with 6 weights (5 inputs + 1 bias)
-    ]
-    nn = NeuralNetwork(topology, weights)
-    board = [[0.0] * 3 for _ in range(3)]  # Example board
-    print(nn.predict(board))
-    nn.to_file("model.json")
-    nn_loaded = NeuralNetwork.from_file("model.json")
-    print(nn_loaded.predict(board))
+    def test_neuron():
+        print("============ TESTING NEURON ============")
+        weights = [0.5, -0.6, 0.1]
+        inputs = [1.0, 2.0]
+        neuron = Neuron(weights)
+
+        # Test with logistic function
+        output_logistic = neuron.propagate(inputs, logistic_func)
+        expected_logistic = logistic_func(0.5 * 1 + -0.6 * 1.0 + 0.1 * 2.0)
+        assert (
+            abs(output_logistic - expected_logistic) < 1e-6
+        ), f"Expected {expected_logistic}, got {output_logistic}"
+
+        print("All tests passed.")
+        print("========================================")
+
+    def test_neural_network():
+        print("======== TESTING NEURAL NETWORK ========")
+        topology = (9, 5, 9)
+        weights = [0.1] * 104
+        nn = NeuralNetwork(topology, weights)
+        board = [[0.0] * 3 for _ in range(3)]
+
+        # Test predict function
+        prediction = nn.predict(board)
+        assert (
+            isinstance(prediction, tuple) and len(prediction) == 2
+        ), "Prediction should be a tuple of two integers."
+
+        # Test serialization and deserialization
+        nn.to_file("model.json")
+        nn_loaded = NeuralNetwork.from_file("model.json")
+        assert nn.predict(board) == nn_loaded.predict(
+            board
+        ), "Loaded model should produce the same prediction."
+
+        print("All tests passed.")
+        print("========================================")
+
+    test_neuron()
+    test_neural_network()
