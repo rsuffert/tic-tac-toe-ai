@@ -161,6 +161,29 @@ if __name__ == "__main__":
 
         print("All tests passed.")
         print("========================================")
+    
+    def test_neural_network_weights_assignment_topology_2_3_2():
+        print("======== TESTING NEURAL NETWORK WEIGHTS ASSIGNMENT FOR TOPOLOGY (2, 3, 2) ========")
+        
+        topology = (2, 3, 2)
+        weights = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7]
+        nn = NeuralNetwork(topology, weights)
+        
+        expected_weights = [
+            [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6], [0.7, 0.8, 0.9]],  # First hidden layer
+            [[1.0, 1.1, 1.2, 1.3], [1.4, 1.5, 1.6, 1.7]]          # Output layer
+        ]
+        
+        for layer_idx, layer in enumerate(nn.network):
+            for neuron_idx, neuron in enumerate(layer):
+                assert neuron.weights == expected_weights[layer_idx][neuron_idx], (
+                    f"Expected weights {expected_weights[layer_idx][neuron_idx]}, "
+                    f"got {neuron.weights} for neuron {neuron_idx} in layer {layer_idx}"
+                )
+        
+        print("All tests passed.")
+        print("========================================")
 
     test_neuron()
     test_neural_network()
+    test_neural_network_weights_assignment_topology_2_3_2()
