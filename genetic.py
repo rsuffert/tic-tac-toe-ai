@@ -7,6 +7,7 @@ from neural_network import NeuralNetwork
 
 NN_TOPOLOGY: Tuple[int, ...] = (9, 9, 9)
 classifier: Classifier = Classifier(Player.X.value, Player.O.value, Player.EMPTY.value)
+minimax: MinimaxAIPlayer = MinimaxAIPlayer()
 
 def fitness(population: List[float], difficulty: Difficulty) -> float:
     """
@@ -18,13 +19,11 @@ def fitness(population: List[float], difficulty: Difficulty) -> float:
         float: A number representing the fitness of the population. The higher the number, the better the population.
     """
     fitness: float = 0.0
-    network: NeuralNetwork   = NeuralNetwork(NN_TOPOLOGY, population)
-    minimax: MinimaxAIPlayer = MinimaxAIPlayer()
-
     board: List[List[Player]] = [[Player.EMPTY for _ in range(3)] for _ in range(3)]
-    result: str = classifier.ONGOING
+    network: NeuralNetwork = NeuralNetwork(NN_TOPOLOGY, population)
     
-    # Simulate a game between the neural network and the minimax AI
+    # simulate a game between the neural network and the minimax AI
+    result: str = classifier.ONGOING
     while result == classifier.ONGOING:
         # neural network plays as X
         row, col = network.predict(_to_float_board(board))
@@ -46,12 +45,9 @@ def fitness(population: List[float], difficulty: Difficulty) -> float:
 
     # grant bonus or penalty based on the result of the match
     match result:
-        case classifier.X_WON:
-            fitness *= 1.25 # grant 25% bonus if the neural network wins
-        case classifier.O_WON:
-            fitness *= 0.75 # penalize 25% if minimax wins
-        case classifier.TIE:
-            fitness *= 1.0 # no bonus or penalty for a tie
+        case classifier.X_WON: fitness *= 1.25 # grant 25% bonus if the neural network wins
+        case classifier.O_WON: fitness *= 0.75 # penalize 25% if minimax wins
+        case classifier.TIE:   pass            # no bonus or penalty for a tie
 
     return fitness
 
