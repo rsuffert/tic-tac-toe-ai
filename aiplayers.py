@@ -45,11 +45,12 @@ class MinimaxAIPlayer(BaseAIPlayer):
     '''AI player that uses the minimax algorithm to make moves.'''
     def __init__(self):
         self._classifier = Classifier(Player.X.value, Player.O.value, Player.EMPTY.value)
+        self._random_player = RandomAIPlayer()
 
     def play(self, difficulty: Difficulty, board: List[List[Player]]) -> List[List[Player]]:
         rnd: int = random.randint(1, 10)
         if rnd <= difficulty.value * 10:
-            return RandomAIPlayer().play(difficulty, board)
+            return self._random_player.play(difficulty, board)
         
         # use minimax to find the best move
         board_str: List[List[str]] = board_to_string_list(board)
