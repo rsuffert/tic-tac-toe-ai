@@ -9,18 +9,18 @@ NN_TOPOLOGY: Tuple[int, ...] = (9, 9, 9)
 classifier: Classifier = Classifier(Player.X.value, Player.O.value, Player.EMPTY.value)
 minimax: MinimaxAIPlayer = MinimaxAIPlayer()
 
-def fitness(population: List[float], difficulty: Difficulty) -> float:
+def fitness(individual: List[float], difficulty: Difficulty) -> float:
     """
-    Calculates the fitness of a population.
+    Calculates the fitness of an individual of a population.
     Args:
-        population (List[float]): The weights for the neural network.
-        difficulty (Difficulty): The difficulty level to which the population will be evaluated against.
+        individual (List[float]): The weights to be used in the neural network.
+        difficulty (Difficulty): The difficulty level to which the individual will be evaluated against.
     Returns:
-        float: A number representing the fitness of the population. The higher the number, the better the population.
+        float: A number representing the fitness of the individual. The higher the number, the better the individual.
     """
     fitness: float = 0.0
     board: List[List[Player]] = [[Player.EMPTY for _ in range(3)] for _ in range(3)]
-    network: NeuralNetwork = NeuralNetwork(NN_TOPOLOGY, population)
+    network: NeuralNetwork = NeuralNetwork(NN_TOPOLOGY, individual)
     
     # simulate a game between the neural network and the minimax AI
     result: str = classifier.ONGOING
