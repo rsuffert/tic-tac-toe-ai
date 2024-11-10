@@ -29,15 +29,20 @@ def fitness(population: List[float], difficulty: Difficulty) -> float:
         # neural network plays as X
         row, col = network.predict(_to_float_board(board))
         if board[row][col] != Player.EMPTY:
-            return float('-inf') # terminate with mininmal fitness if the network makes an invalid move
+            # terminate the game if the network makes an invalid move (but still value how far it got)
+            return fitness
         fitness += 1.0 # grant one point for each valid move by the network
         board[row][col] = Player.X
+
+        # classify the board after the neural network plays
+        result = classifier.classify(_board_to_string(board))
+        if result != classifier.ONGOING: break
 
         # minimax plays as O
         board = minimax.play(difficulty, board)
 
-        # classify the board
-        result = classifier.classify(_board_to_string(board)) # TODO: probably need to check the result right after each player plays
+        # classify the board after minimax plays
+        result = classifier.classify(_board_to_string(board))
 
     # grant bonus or penalty based on the result of the match
     match result:
