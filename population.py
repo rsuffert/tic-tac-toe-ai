@@ -1,6 +1,8 @@
 import random
 from typing import List, Tuple
 from neural_network import NeuralNetwork
+from aiplayers import Difficulty
+from fitness import fitness
 
 
 def generateRandomWeights(topology: Tuple[int, ...]) -> List[float]:
@@ -18,9 +20,37 @@ def generateRandomWeights(topology: Tuple[int, ...]) -> List[float]:
 class Population:
     def __init__(self, size: int, topology: Tuple[int, ...]) -> None:
         self.size = size
-        self.individuals: List[NeuralNetwork] = [
-            NeuralNetwork(topology=topology, weights=generateRandomWeights(topology)) for _ in range(size)
+        self.topology = topology
+        self.individuals: List[List[float]] = [
+            generateRandomWeights(topology) + [0.0] for _ in range(size)
         ]
 
-    def getPopulationSize(self):
+    def getPopulationSize(self) -> int:
         return self.size
+
+    def getIndividual(self, index: int) -> List[float]:
+        """
+        Returns the weights for the individual at the given index.
+        """
+        return self.individuals[index]
+
+    def setIndividual(self, index: int, weights: List[float]) -> None:
+        """
+        Sets the weights for the individual at the given index.
+        """
+        self.individuals[index] = weights
+
+    def updateFitness(self, difficulty: Difficulty) -> None:
+        """
+        Updates the fitness for all individuals in the population.
+        """
+        for i in range(self.size):
+            weights = self.individuals[i][:-1]
+            fitness_value = fitness(weights, difficulty, self.topology)
+            self.individuals[i][-1] = fitness_value
+
+    def sortIndividualsByFitness(self) -> None:
+        """
+        Sorts the individuals by their fitness in descending order.
+        """
+        self.individuals.sort(key=lambda ind: ind[-1], reverse=True)
