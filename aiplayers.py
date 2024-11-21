@@ -6,6 +6,7 @@ from enum import Enum
 from typing import List
 import random
 from tictactoeutils import Classifier
+from neural_network import NeuralNetwork
 
 class Player(Enum):
     '''Enum for player types.'''
@@ -105,6 +106,22 @@ class MinimaxAIPlayer(BaseAIPlayer):
         '''Returns True if the game ended; False otherwise.'''
         board_str: str = board_to_string(board)
         return self._classifier.is_winner(board_str, Player.O.value) or self._classifier.is_winner(board_str, Player.X.value) or self._classifier.is_tie(board_str)
+
+class NeuralNetworkAIPlayer(BaseAIPlayer):
+    def __init__(self, model_file: str):
+        self._network = NeuralNetwork.from_file(model_file)
+        self._random_player = RandomAIPlayer()
+    
+    def play(self, difficulty: Difficulty, board: List[List[Player]]) -> List[List[Player]]:
+        rnd: int = random.randint(1, 10)
+        if rnd <= difficulty.value * 10:
+            return self._random_player.play(difficulty, board)
+        
+        # use neural network to find the best move
+        board_floats: List[List[float]] = [[float(cell.value) for cell in row] for row in board]
+        row, col = self._network.predict(board_floats)
+        board[row][col] = Player.O
+        return board
 
 def board_to_string(board: List[List[str]]) -> str:
     '''Converts the board to a string.'''
