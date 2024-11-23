@@ -86,10 +86,7 @@ class NeuralNetwork:
         ]
 
         if sum(synapses_per_layer) != len(weights):
-            raise ValueError(
-                f"Expected {sum(synapses_per_layer)} weights, got {
-                    len(weights)}."
-            )
+            raise ValueError(f"Expected {sum(synapses_per_layer)} weights, got {len(weights)}.")
 
     def predict(self, board: List[List[float]]) -> Tuple[int, int]:
         inputs = [cell for row in board for cell in row]
