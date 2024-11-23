@@ -1,5 +1,5 @@
 import random
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from aiplayers import Difficulty, MinimaxAIPlayer, Player
 from tictactoeutils import Classifier
 from neural_network import NeuralNetwork
@@ -20,6 +20,88 @@ def fitness(individual: List[float], difficulty: Difficulty, nn_topology: Tuple[
             The maximum fitness value possible is 6.25 (if the network plays all its turns correclty and, at the end,
             wins), and the minimum is 1.0, since it always begins playing, so at least one correct move will be made.
     """
+    def win_condition(row: int, col: int, board: List[List[Player]], player: Player = Player.X) -> bool:
+        """
+        Checks if the movement made by the player resulted in a win condition.
+        That is, if the player has two marks in a row, column, or diagonal and
+        the third cell is empty.
+        """
+        def safe_get(r: int, c: int) -> Optional[Player]:
+            """
+            Safely get the value from the board at the specified row and column.
+            Returns None if the index is out of bounds.
+            """
+            if 0 <= r < len(board) and 0 <= c < len(board[r]):
+                return board[r][c]
+            return None
+
+        def check_line(line: List[Optional[Player]]) -> bool:
+            return line.count(player) == 2 and line.count(Player.EMPTY) == 1
+
+        # Temporarily place the player's mark
+        board[row][col] = player
+
+        # Check row
+        if check_line([safe_get(row, i) for i in range(3)]): 
+            board[row][col] = Player.EMPTY
+            return True
+
+        # Check column
+        if check_line([safe_get(i, col) for i in range(3)]): 
+            board[row][col] = Player.EMPTY
+            return True
+
+        # Check main diagonal
+        if row == col and check_line([safe_get(i, i) for i in range(3)]): 
+            board[row][col] = Player.EMPTY
+            return True
+
+        # Check anti-diagonal
+        if row + col == 2 and check_line([safe_get(i, 2 - i) for i in range(3)]): 
+            board[row][col] = Player.EMPTY
+            return True
+
+        # Remove the temporary mark
+        board[row][col] = Player.EMPTY
+        return False
+    
+    def blocked_opponent(row: int, col: int, board: List[List[Player]], player: Player = Player.X) -> bool:
+        """
+        Checks if the movement made by the player blocked a potential win
+        condition of the opponent.
+        """
+        opponent = Player.O if player == Player.X else Player.X
+
+        def safe_get(row: int, col: int) -> Optional[Player]:
+            """
+            Safely get the value from the board at the specified row and column.
+            Returns None if the index is out of bounds.
+            """
+            if 0 <= row < len(board) and 0 <= col < len(board[0]):
+                return board[row][col]
+            return None
+
+        def check_line(line: List[Optional[Player]]) -> bool:
+            return line.count(opponent) == 2 and line.count(Player.EMPTY) == 1
+
+        # Check row
+        if check_line([safe_get(row, i) for i in range(3)]): 
+            return True
+
+        # Check column
+        if check_line([safe_get(i, col) for i in range(3)]): 
+            return True
+
+        # Check main diagonal
+        if row == col and check_line([safe_get(i, i) for i in range(3)]): 
+            return True
+
+        # Check anti-diagonal
+        if row + col == 2 and check_line([safe_get(i, 2 - i) for i in range(3)]): 
+            return True
+
+        return False
+    
     fitness: float = 0.0
     board: List[List[Player]] = [
         [Player.EMPTY for _ in range(3)] for _ in range(3)]
@@ -34,6 +116,11 @@ def fitness(individual: List[float], difficulty: Difficulty, nn_topology: Tuple[
             # terminate the game if the network makes an invalid move (but still value how far it got)
             return fitness
         fitness += 1.0  # grant one point for each valid move by the network
+        
+        # check how good the move was
+        if win_condition(row, col, board):      fitness += 0.5
+        elif blocked_opponent(row, col, board): fitness += 0.5
+        
         board[row][col] = Player.X
 
         # classify the board after the neural network plays
@@ -88,7 +175,7 @@ class Population:
                 weights.extend([random.uniform(-1.0, 1.0)
                             for _ in range((prev_layer_size + 1) * cur_layer_size)])
             return weights
-            
+
         self.individuals = [
             generate_random_weights(topology) + [0.0] for _ in range(self.size)
         ]
@@ -96,19 +183,19 @@ class Population:
 
     def update_fitness(self, difficulty: Difficulty) -> None:
         """Updates the fitness for all individuals in the population."""
-        def eval_fitness(index: int) -> Tuple[int, float]:
-            return index, fitness(
-                self.individuals[index][:-1], 
-                difficulty, 
-                self.topology
-            )
-
         with concurrent.futures.ProcessPoolExecutor() as executor:
-            futures = [executor.submit(eval_fitness, i) for i in range(self.size)]
+            futures = [executor.submit(self.eval_fitness, i, difficulty) for i in range(self.size)]
             for future in concurrent.futures.as_completed(futures):
                 index, fit_val = future.result()
                 self.individuals[index][-1] = fit_val
                 print(f"\t{index+1}. Fitness = {fit_val}")
+
+    def eval_fitness(self, index: int, difficulty: Difficulty) -> Tuple[int, float]:
+        return index, fitness(
+            self.individuals[index][:-1], 
+            difficulty, 
+            self.topology
+        )
 
     def sort_individuals_by_fitness(self) -> None:
         """Sorts the individuals by their fitness in descending order."""
@@ -132,13 +219,8 @@ class GeneticAlgorithm:
         print("Training has started...")
         for g in range(self.max_generations):
             difficulty = self.random_difficulty()
-
             self.population = self.new_generation(self.population, difficulty)
             print(f"Generation {g+1} has been trained. Best fitness is {self.population.individuals[0][-1]} and difficulty is {difficulty}")
-            
-            if self.population.individuals[0][-1] >= 6.25:
-                print("Elite individual has reached the maximum fitness. Stopping training...")
-                break
 
     def new_generation(self, population: Population, difficulty: Difficulty) -> Population:
         """Takes in the current population and returns the next generation of individuals."""
@@ -192,9 +274,9 @@ class GeneticAlgorithm:
     def random_difficulty(self) -> Difficulty:
         """Generates a random difficulty according to predefined probabilities."""
         difficulties = [
-            (Difficulty.EASY, 0.25),
-            (Difficulty.MEDIUM, 0.40),
-            (Difficulty.HARD, 0.35)
+            (Difficulty.EASY, 0.40),
+            (Difficulty.MEDIUM, 0.35),
+            (Difficulty.HARD, 0.25)
         ]
         
         choices, weights = zip(*difficulties)
@@ -202,9 +284,9 @@ class GeneticAlgorithm:
 
 if __name__ == "__main__":
     topology = (9, 9, 9)
-    ga = GeneticAlgorithm(50, topology, 0.01, 500, True)
+    ga = GeneticAlgorithm(50, topology, 0.02, 500, True)
     try: ga.run()
     finally:
         print("Saving best individual...")
         nn = NeuralNetwork(topology, ga.population.individuals[0][:-1])
-        nn.to_file("model2.json")
+        nn.to_file("model.json")
