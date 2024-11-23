@@ -162,4 +162,7 @@ cython_debug/
 #.idea/
 
 # Generated models (we'll not store them for now)
-model.json
+*.json
+
+# Custom test files
+*test*
