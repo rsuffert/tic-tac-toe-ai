@@ -3,6 +3,7 @@ import random
 from typing import List, Tuple
 from aiplayers import Difficulty, MinimaxAIPlayer, Player
 from tictactoeutils import Classifier
+from neural_network import NeuralNetwork
 
 classifier: Classifier = Classifier(Player.X.value, Player.O.value, Player.EMPTY.value)  # noqa
 
@@ -86,6 +87,10 @@ class GeneticAlgorithm:
             best_fitness = self.population.getIndividual(0)[-1]
             print(f"Generation {generation}: Best fitness = {best_fitness}, Difficulty = {difficulty.name}")  # noqa
 
+        print("Genetic algorithm finished.")
+        NeuralNetwork(self.topology, self.population.getIndividual(0)[
+                      :-1]).to_file("best_model.json")
+
     def new_generation(self, population: Population, difficulty: Difficulty) -> Population:
         new_population = Population(self.population_size, self.topology)
         new_population.clear()
@@ -129,9 +134,9 @@ class GeneticAlgorithm:
         - 33% chance of being HARD
         """
         rand = random.random()
-        if rand < 0.3:
+        if rand < 0.5:
             return Difficulty.EASY
-        elif rand < 0.66:
+        elif rand < 0.8:
             return Difficulty.MEDIUM
         else:
             return Difficulty.HARD
@@ -201,19 +206,17 @@ def generateRandomWeights(topology: Tuple[int, ...]) -> List[float]:
     weights = []
     for prev_layer_size, cur_layer_size in zip(topology[:-1], topology[1:]):
         # Generate weights for each neuron in the current layer, including bias
-        weights.extend([random.uniform(-1.0, 1.0)
-                       for _ in range((prev_layer_size + 1) * cur_layer_size)])
+        weights.extend([random.uniform(-1.0, 1.0)for _ in range((prev_layer_size + 1) * cur_layer_size)])  # noqa
     return weights
 
 
 if __name__ == "__main__":
-    population_size = 10
+    population_size = 100
     topology = (9, 9, 9)
     crossover_rate = 0.9
     mutation_rate = 0.01
-    max_generations = 15
+    max_generations = 100
     elitism = True
 
-    ga = GeneticAlgorithm(population_size, topology,
-                          crossover_rate, mutation_rate, max_generations, elitism)
+    ga = GeneticAlgorithm(population_size, topology, crossover_rate, mutation_rate, max_generations, elitism)  # noqa
     ga.run()
