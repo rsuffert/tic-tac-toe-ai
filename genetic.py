@@ -213,14 +213,33 @@ class GeneticAlgorithm:
         self.max_generations = max_generations
         self.elitism = elitism
         self.population = Population(population_size, topology).with_random_individuals()
+        self.difficulty = Difficulty.EASY # start with easy difficulty
 
     def run(self):
         """Runs the genetic algorithm with the parameters specified in the constructor."""
         print("Training has started...")
         for g in range(self.max_generations):
-            difficulty = self.random_difficulty()
-            self.population = self.new_generation(self.population, difficulty)
-            print(f"Generation {g+1} has been trained. Best fitness is {self.population.individuals[0][-1]} and difficulty is {difficulty}")
+            self.population = self.new_generation(self.population, self.difficulty)
+            print(f"Generation {g+1} has been trained. Best fitness was {self.population.individuals[0][-1]} and difficulty was {self.difficulty}")
+            self.adjust_difficulty()
+
+    def adjust_difficulty(self):
+        """Adjusts the difficulty based on the performance of the population."""
+        best_fitness = self.population.individuals[0][-1]
+        if   best_fitness <= 4.0:
+            # until the network learns to play at valid positions, we keep it at easy difficulty
+            # so it has more time to learn what valid positions are before Minimax beats it...
+            self.difficulty = Difficulty.EASY
+        elif best_fitness <= 5.0:
+            # now the network is playing valid moves, but it is not competitive...
+            # let's make things a bit harder by introducing medium difficulty...
+            self.difficulty = self.random_difficulty(0.60, 0.40, 0.00)
+        elif best_fitness <= 5.5:
+            # the network is getting better... let's introduce the hard difficulty...
+            self.difficulty = self.random_difficulty(0.20, 0.50, 0.30)
+        else:
+            # the network is doing great! let's make it even harder...
+            self.difficulty = self.random_difficulty(0.20, 0.40, 0.40)
 
     def new_generation(self, population: Population, difficulty: Difficulty) -> Population:
         """Takes in the current population and returns the next generation of individuals."""
@@ -262,23 +281,23 @@ class GeneticAlgorithm:
             return individual
         
         # apply mutation
-        n_positions_to_mutate = random.randint(1, 5)
+        n_positions_to_mutate = random.randint(1, 4)
         print(f"\tMutating {n_positions_to_mutate} positions...")
         for _ in range(n_positions_to_mutate):
-            # -1 to avoid changing the fitness value, and do not change the best value (elitism)
-            position = random.randint(1, len(individual) - 1)
+            # upper bound is len - 2 to avoid "mutating" the fitness
+            # (note that randint's upper bound is inclusive)
+            position = random.randint(0, len(individual) - 2)
             individual[position] = random.uniform(-1.0, 1.0)
 
         return individual
 
-    def random_difficulty(self) -> Difficulty:
-        """Generates a random difficulty according to predefined probabilities."""
+    def random_difficulty(self, easy_prob: float, medium_prob: float, hard_prob: float) -> Difficulty:
+        """Randomizes a difficulty according to the given probabilities."""
         difficulties = [
-            (Difficulty.EASY, 0.40),
-            (Difficulty.MEDIUM, 0.35),
-            (Difficulty.HARD, 0.25)
+            (Difficulty.EASY,   easy_prob),
+            (Difficulty.MEDIUM, medium_prob),
+            (Difficulty.HARD,   hard_prob)
         ]
-        
         choices, weights = zip(*difficulties)
         return random.choices(choices, weights)[0]
 
