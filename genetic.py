@@ -232,14 +232,16 @@ class GeneticAlgorithm:
             self.difficulty = Difficulty.EASY
         elif best_fitness <= 5.0:
             # now the network is playing valid moves, but it is not competitive...
-            # let's make things a bit harder by introducing medium difficulty...
-            self.difficulty = self.random_difficulty(0.60, 0.40, 0.00)
+            # let's make things a bit harder by introducing more medium difficulty games
+            # and very few hard games
+            self.difficulty = self.random_difficulty(0.30, 0.60, 0.10)
         elif best_fitness <= 5.5:
-            # the network is getting better... let's introduce the hard difficulty...
-            self.difficulty = self.random_difficulty(0.20, 0.50, 0.30)
+            # network is evolving well! let's make it play more hard games and
+            # less easy games
+            self.difficulty = self.random_difficulty(0.15, 0.50, 0.35)
         else:
-            # the network is doing great! let's make it even harder...
-            self.difficulty = self.random_difficulty(0.20, 0.40, 0.40)
+            # the network is doing great!
+            self.difficulty = self.random_difficulty(0.10, 0.50, 0.40)
 
     def new_generation(self, population: Population, difficulty: Difficulty) -> Population:
         """Takes in the current population and returns the next generation of individuals."""
@@ -303,7 +305,7 @@ class GeneticAlgorithm:
 
 if __name__ == "__main__":
     topology = (9, 9, 9)
-    ga = GeneticAlgorithm(50, topology, 0.02, 500, True)
+    ga = GeneticAlgorithm(100, topology, 0.02, 500, True)
     try: ga.run()
     finally:
         print("Saving best individual...")
