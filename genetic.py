@@ -103,8 +103,7 @@ def fitness(individual: List[float], difficulty: Difficulty, nn_topology: Tuple[
         return False
     
     fitness: float = 0.0
-    board: List[List[Player]] = [
-        [Player.EMPTY for _ in range(3)] for _ in range(3)]
+    board: List[List[Player]] = [[Player.EMPTY for _ in range(3)] for _ in range(3)]
     network: NeuralNetwork = NeuralNetwork(nn_topology, individual)
 
     # simulate a game between the neural network and the minimax AI
@@ -118,7 +117,7 @@ def fitness(individual: List[float], difficulty: Difficulty, nn_topology: Tuple[
         fitness += 1.0  # grant one point for each valid move by the network
         
         # check how good the move was
-        if win_condition(row, col, board):      fitness += 0.5
+        if   win_condition(row, col, board):    fitness += 0.5
         elif blocked_opponent(row, col, board): fitness += 0.5
         
         board[row][col] = Player.X
@@ -136,10 +135,9 @@ def fitness(individual: List[float], difficulty: Difficulty, nn_topology: Tuple[
 
     # grant bonus or penalty based on the result of the match
     match result:
-        # grant 25% bonus if the neural network wins
-        case classifier.X_WON: fitness *= 1.25
-        case classifier.O_WON: fitness *= 0.75  # penalize 25% if minimax wins
-        case classifier.TIE: fitness *= 1.12  # 12% bonus for a tie
+        case classifier.X_WON: fitness *= 1.35
+        case classifier.O_WON: fitness *= 0.75
+        case classifier.TIE:   fitness *= 1.20
 
     return fitness
 
@@ -226,19 +224,19 @@ class GeneticAlgorithm:
     def adjust_difficulty(self):
         """Adjusts the difficulty based on the performance of the population."""
         best_fitness = self.population.individuals[0][-1]
-        if   best_fitness <= 4.0:
+        if   best_fitness <= 3.0:
             # until the network learns to play at valid positions, we keep it at easy difficulty
             # so it has more time to learn what valid positions are before Minimax beats it...
             self.difficulty = Difficulty.EASY
-        elif best_fitness <= 5.0:
-            # now the network is playing valid moves, but it is not competitive...
-            # let's make things a bit harder by introducing more medium difficulty games
-            # and very few hard games
+        elif best_fitness <= 4.0:
+            # now the network is making some valid moves, but it is not competitive...
+            # let's start to make things a bit harder by introducing more medium difficulty
+            # games and very few hard games
             self.difficulty = self.random_difficulty(0.30, 0.60, 0.10)
-        elif best_fitness <= 5.5:
+        elif best_fitness <= 5.0:
             # network is evolving well! let's make it play more hard games and
             # less easy games
-            self.difficulty = self.random_difficulty(0.15, 0.50, 0.35)
+            self.difficulty = self.random_difficulty(0.20, 0.50, 0.30)
         else:
             # the network is doing great!
             self.difficulty = self.random_difficulty(0.10, 0.50, 0.40)
@@ -304,9 +302,17 @@ class GeneticAlgorithm:
         return random.choices(choices, weights)[0]
 
 if __name__ == "__main__":
-    topology = (9, 9, 9)
-    ga = GeneticAlgorithm(100, topology, 0.02, 500, True)
-    try: ga.run()
+    topology = (9, 9, 9)     # Neural network topology
+    population_size = 50     # Population size
+    mutation_rate = 0.05     # Mutation rate
+    max_generations = 500    # Maximum number of generations
+    elitism = True           # Use elitism
+
+    try: 
+        ga = GeneticAlgorithm(
+            population_size, topology, mutation_rate, max_generations, elitism
+        )
+        ga.run()
     finally:
         print("Saving best individual...")
         nn = NeuralNetwork(topology, ga.population.individuals[0][:-1])
