@@ -112,20 +112,18 @@ def fitness(individual: List[float], difficulty: Difficulty, nn_topology: Tuple[
         # neural network plays as X
         row, col = network.predict(_to_float_board(board))
         if board[row][col] != Player.EMPTY:
-            # terminate the game if the network makes an invalid move (but still value how far it got)
-            return fitness
+            # terminate the game with a penalty if the network makes an invalid move (but still value how far it got)
+            return fitness * 0.30 # -70%
         fitness += 1.0  # grant one point for each valid move by the network
         
         # check how good the move was
-        if   win_condition(row, col, board):    fitness += 0.5
-        elif blocked_opponent(row, col, board): fitness += 0.5
+        if win_condition(row, col, board):    fitness += 0.5
+        if blocked_opponent(row, col, board): fitness += 0.5
         
-        board[row][col] = Player.X
-
         # classify the board after the neural network plays
+        board[row][col] = Player.X
         result = classifier.classify(_board_to_string(board))
-        if result != classifier.ONGOING:
-            break
+        if result != classifier.ONGOING: break
 
         # minimax plays as O
         board = minimax.play(difficulty, board)
@@ -135,9 +133,9 @@ def fitness(individual: List[float], difficulty: Difficulty, nn_topology: Tuple[
 
     # grant bonus or penalty based on the result of the match
     match result:
-        case classifier.X_WON: fitness *= 1.35
-        case classifier.O_WON: fitness *= 0.75
-        case classifier.TIE:   fitness *= 1.20
+        case classifier.X_WON: fitness *= 1.50 # +50%
+        case classifier.TIE:   fitness *= 1.25 # +25%
+        case classifier.O_WON: fitness *= 0.70 # -30%
 
     return fitness
 
@@ -199,6 +197,8 @@ class Population:
         """Sorts the individuals by their fitness in descending order."""
         self.individuals.sort(key=lambda ind: ind[-1], reverse=True)
 
+    def __len__(self) -> int:
+        return len(self.individuals)
 
 class GeneticAlgorithm:
     def __init__(
@@ -215,31 +215,29 @@ class GeneticAlgorithm:
 
     def run(self):
         """Runs the genetic algorithm with the parameters specified in the constructor."""
-        print("Training has started...")
         for g in range(self.max_generations):
+            print(f"Training Generation {g+1} with {self.difficulty}...")
             self.population = self.new_generation(self.population, self.difficulty)
-            print(f"Generation {g+1} has been trained. Best fitness was {self.population.individuals[0][-1]} and difficulty was {self.difficulty}")
+            print(f"Generation {g+1} has been trained (best fitness was {self.population.individuals[0][-1]})")
+            print("--------------------------------------------------------------------------------------------")
             self.adjust_difficulty()
 
     def adjust_difficulty(self):
         """Adjusts the difficulty based on the performance of the population."""
-        best_fitness = self.population.individuals[0][-1]
-        if   best_fitness <= 3.0:
-            # until the network learns to play at valid positions, we keep it at easy difficulty
-            # so it has more time to learn what valid positions are before Minimax beats it...
+        # we keep it at easy difficulty until the network can make some valid moves
+        # and then we slightly adjust the difficulty
+        avg_fitness = sum(individual[-1] for individual in self.population.individuals) / self.population_size
+        if  avg_fitness <= 2.0:
             self.difficulty = Difficulty.EASY
-        elif best_fitness <= 4.0:
-            # now the network is making some valid moves, but it is not competitive...
-            # let's start to make things a bit harder by introducing more medium difficulty
-            # games and very few hard games
-            self.difficulty = self.random_difficulty(0.30, 0.60, 0.10)
-        elif best_fitness <= 5.0:
-            # network is evolving well! let's make it play more hard games and
-            # less easy games
-            self.difficulty = self.random_difficulty(0.20, 0.50, 0.30)
+        elif avg_fitness <= 3.0:
+            self.difficulty = self.random_difficulty(0.65, 0.35, 0.00)
+        elif avg_fitness <= 4.0:
+            self.difficulty = self.random_difficulty(0.50, 0.50, 0.00)
+        elif avg_fitness <= 5.0:
+            self.difficulty = self.random_difficulty(0.30, 0.50, 0.20)
         else:
-            # the network is doing great!
-            self.difficulty = self.random_difficulty(0.10, 0.50, 0.40)
+            self.difficulty = self.random_difficulty(0.20, 0.50, 0.30)
+        print(f"Average fitness is {avg_fitness}. Difficulty has been adjusted to {self.difficulty}")
 
     def new_generation(self, population: Population, difficulty: Difficulty) -> Population:
         """Takes in the current population and returns the next generation of individuals."""
@@ -249,13 +247,14 @@ class GeneticAlgorithm:
             population.sort_individuals_by_fitness()
             new_population.individuals.append(population.individuals[0])
 
-        while len(new_population.individuals) < self.population_size:
+        while len(new_population) < self.population_size:
             parent1 = self.tournament(population)
             parent2 = self.tournament(population)
             child = self.crossover(parent1, parent2)
-            new_population.individuals.append(
-                self.mutate(child)
-            )
+            new_population.individuals.append(child)
+
+        if random.random() < self.mutation_rate:
+            self.mutate(new_population)
 
         new_population.update_fitness(difficulty)
         new_population.sort_individuals_by_fitness()
@@ -263,10 +262,10 @@ class GeneticAlgorithm:
 
     def tournament(self, population: Population) -> List[float]:
         """Selects two random individuals from the population and returns the one with the highest fitness."""
-        selected = random.sample(population.individuals, 2)
-        if selected[0][-1] > selected[1][-1]:
-            return selected[0]
-        return selected[1]
+        candidate1, candidate2 = random.sample(population.individuals, 2)
+        if candidate1[-1] > candidate2[-1]:
+            return candidate1
+        return candidate2
 
     def crossover(self, parent1: List[float], parent2: List[float]) -> List[float]:
         """Generates a child by crossing over the weights of two parents."""
@@ -274,22 +273,18 @@ class GeneticAlgorithm:
         child.append(0.0)  # Initialize fitness value for the child
         return child
 
-    def mutate(self, individual: List[float]) -> List[float]:
-        """Mutates or not a random number of positions of the individual according to the mutation rate."""
-        if random.random() >= self.mutation_rate:
-            # no mutation to this individual
-            return individual
-        
-        # apply mutation
-        n_positions_to_mutate = random.randint(1, 4)
-        print(f"\tMutating {n_positions_to_mutate} positions...")
-        for _ in range(n_positions_to_mutate):
-            # upper bound is len - 2 to avoid "mutating" the fitness
-            # (note that randint's upper bound is inclusive)
-            position = random.randint(0, len(individual) - 2)
-            individual[position] = random.uniform(-1.0, 1.0)
-
-        return individual
+    def mutate(self, population: Population):
+        """
+        Mutates a random number of weights of a random number of individuals in the population.
+        """
+        n_individuals_to_mutate = random.randint(1, 4) # mutate 1 to 4 individuals
+        for _ in range(n_individuals_to_mutate):
+            individual_idx = random.randint(0, len(population) - 1)
+            n_positions_to_mutate = random.randint(1, 4) # mutate 1 to 4 positions
+            print(f"\tMutating {n_positions_to_mutate} positions in individual {individual_idx}...")
+            for _ in range(n_positions_to_mutate):
+                weight_idx = random.randint(0, len(population.individuals[individual_idx]) - 2)
+                population.individuals[individual_idx][weight_idx] = random.uniform(-1.0, 1.0)
 
     def random_difficulty(self, easy_prob: float, medium_prob: float, hard_prob: float) -> Difficulty:
         """Randomizes a difficulty according to the given probabilities."""
@@ -303,7 +298,7 @@ class GeneticAlgorithm:
 
 if __name__ == "__main__":
     topology = (9, 9, 9)     # Neural network topology
-    population_size = 50     # Population size
+    population_size = 100    # Population size
     mutation_rate = 0.05     # Mutation rate
     max_generations = 500    # Maximum number of generations
     elitism = True           # Use elitism
