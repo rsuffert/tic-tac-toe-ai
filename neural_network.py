@@ -2,8 +2,6 @@
 import json
 from math import exp
 from typing import Callable, List, Tuple
-from aiplayers import Player, Difficulty, MinimaxAIPlayer
-from tictactoeutils import Classifier
 
 
 def logistic_func(x: float) -> float:
