@@ -108,34 +108,58 @@ def fitness(individual: List[float], difficulty: Difficulty, nn_topology: Tuple[
 
     # simulate a game between the neural network and the minimax AI
     result: str = classifier.ONGOING
+    turns: int = 0
     while result == classifier.ONGOING:
-        # neural network plays as X
+        # 1. neural network plays as X
         row, col = network.predict(_to_float_board(board))
+
+        # 2. evaluate how good the move was
         if board[row][col] != Player.EMPTY:
-            # terminate the game with a penalty if the network makes an invalid move (but still value how far it got)
-            return fitness * 0.30 # -70%
-        fitness += 1.0  # grant one point for each valid move by the network
-        
-        # check how good the move was
-        if win_condition(row, col, board):    fitness += 0.5
-        if blocked_opponent(row, col, board): fitness += 0.5
-        
-        # classify the board after the neural network plays
+            # playing at non-empty positions is invalid and results in a game over with a penalty of -90%
+            penalty = 0.90 ** turns # exponential decay to value how far the network got
+            return fitness * (1 - penalty)
+
+        fitness += 1.0  # valid moves are rewarded by granting a whole fitness point
+
+        '''
+        if win_condition(row, col, board):
+            # building a strategy towards winning is encouraged by awarding 0.5 fitness points
+            fitness += 0.5
+        if blocked_opponent(row, col, board):
+            # blocking the opponent from winning is also encouraged by awarding 0.5 fitness points
+            fitness += 0.5
+        if (row, col) == (1, 1):
+            # controlling the center is generally a good thing, so that is rewarded with 0.2 fitness points
+            fitness += 0.25
+        if (row, col) in [(0, 0), (0, 2), (2, 0), (2, 2)]: 
+            # controlling the corners is also generally good, so that is rewarded with 0.1 fitness points
+            fitness += 0.2
+        '''
+
+        # 3. classify the board after the neural network plays to check for a game over
         board[row][col] = Player.X
         result = classifier.classify(_board_to_string(board))
         if result != classifier.ONGOING: break
 
-        # minimax plays as O
+        # 4. minimax plays as O
         board = minimax.play(difficulty, board)
 
-        # classify the board after minimax plays
+        # 5. classify the board after minimax plays to check for a game over at the loop condition
         result = classifier.classify(_board_to_string(board))
 
-    # grant bonus or penalty based on the result of the match
+        turns += 1
+
+    # game has ended! grant bonus or penalty based on the result of the match
     match result:
-        case classifier.X_WON: fitness *= 1.50 # +50%
-        case classifier.TIE:   fitness *= 1.25 # +25%
-        case classifier.O_WON: fitness *= 0.70 # -30%
+        case classifier.X_WON:
+            # we award a 50% bonus to the fitness score if the neural network wins
+            fitness *= 1.50
+        case classifier.TIE:
+            # we award a 25% bonus to the fitness score if the match ends in a tie
+            fitness *= 1.25
+        case classifier.O_WON:
+            # we penalize the fitness score with -25% if the neural network loses
+            fitness *= 0.75
 
     return fitness
 
@@ -219,25 +243,18 @@ class GeneticAlgorithm:
             print(f"Training Generation {g+1} with {self.difficulty}...")
             self.population = self.new_generation(self.population, self.difficulty)
             print(f"Generation {g+1} has been trained (best fitness was {self.population.individuals[0][-1]})")
-            print("--------------------------------------------------------------------------------------------")
             self.adjust_difficulty()
+            print("--------------------------------------------------------------------------------------------")
 
     def adjust_difficulty(self):
         """Adjusts the difficulty based on the performance of the population."""
-        # we keep it at easy difficulty until the network can make some valid moves
-        # and then we slightly adjust the difficulty
-        avg_fitness = sum(individual[-1] for individual in self.population.individuals) / self.population_size
-        if  avg_fitness <= 2.0:
-            self.difficulty = Difficulty.EASY
-        elif avg_fitness <= 3.0:
-            self.difficulty = self.random_difficulty(0.65, 0.35, 0.00)
-        elif avg_fitness <= 4.0:
-            self.difficulty = self.random_difficulty(0.50, 0.50, 0.00)
-        elif avg_fitness <= 5.0:
-            self.difficulty = self.random_difficulty(0.30, 0.50, 0.20)
+        best_fitness = self.population.individuals[0][-1]
+        if best_fitness < 1.0:
+            self.difficulty = self.random_difficulty(0.70, 0.30, 0.00)
+        elif best_fitness < 2.0:
+            self.difficulty = self.random_difficulty(0.40, 0.50, 0.10)
         else:
-            self.difficulty = self.random_difficulty(0.20, 0.50, 0.30)
-        print(f"Average fitness is {avg_fitness}. Difficulty has been adjusted to {self.difficulty}")
+            self.difficulty = self.random_difficulty(0.30, 0.50, 0.20)
 
     def new_generation(self, population: Population, difficulty: Difficulty) -> Population:
         """Takes in the current population and returns the next generation of individuals."""
@@ -260,12 +277,9 @@ class GeneticAlgorithm:
         new_population.sort_individuals_by_fitness()
         return new_population
 
-    def tournament(self, population: Population) -> List[float]:
-        """Selects two random individuals from the population and returns the one with the highest fitness."""
-        candidate1, candidate2 = random.sample(population.individuals, 2)
-        if candidate1[-1] > candidate2[-1]:
-            return candidate1
-        return candidate2
+    def tournament(self, population: Population, tournament_size: int = 10) -> List[float]:
+        candidates = random.sample(population.individuals, tournament_size)
+        return max(candidates, key=lambda ind: ind[-1])
 
     def crossover(self, parent1: List[float], parent2: List[float]) -> List[float]:
         """Generates a child by crossing over the weights of two parents."""
@@ -297,16 +311,14 @@ class GeneticAlgorithm:
         return random.choices(choices, weights)[0]
 
 if __name__ == "__main__":
-    topology = (9, 9, 9)     # Neural network topology
-    population_size = 100    # Population size
-    mutation_rate = 0.05     # Mutation rate
-    max_generations = 500    # Maximum number of generations
-    elitism = True           # Use elitism
+    topology = (9, 9, 9)
+    population_size = 100
+    mutation_rate = 0.10
+    max_generations = 500
+    elitism = True
 
     try: 
-        ga = GeneticAlgorithm(
-            population_size, topology, mutation_rate, max_generations, elitism
-        )
+        ga = GeneticAlgorithm(population_size, topology, mutation_rate, max_generations, elitism)
         ga.run()
     finally:
         print("Saving best individual...")
