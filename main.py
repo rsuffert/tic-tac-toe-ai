@@ -25,7 +25,7 @@ def main() -> None:
         user_plays()
         result = c.classify(board_to_string())
         if result != c.ONGOING: break
-        
+
         board  = ai_player.play(difficulty, board)
         result = c.classify(board_to_string())
 

@@ -1,9 +1,7 @@
-# neural_network
+# neural_network.py
 import json
 from math import exp
 from typing import Callable, List, Tuple
-
-ActivationFunc = Callable[[float], float]
 
 
 def logistic_func(x: float) -> float:
@@ -11,6 +9,9 @@ def logistic_func(x: float) -> float:
     Logistic activation function.
     """
     return 1.0 / (1.0 + exp(-x))
+
+
+ActivationFunc = Callable[[float], float]
 
 
 class Neuron:
@@ -24,9 +25,7 @@ class Neuron:
         """
         self.weights = weights
 
-    def propagate(
-        self, inputs: List[float], f: ActivationFunc = logistic_func
-    ) -> float:
+    def propagate(self, inputs: List[float], f: ActivationFunc = logistic_func) -> float:
         """
         Propagates the inputs through the neuron and returns the output.
         """
@@ -34,7 +33,8 @@ class Neuron:
             raise ValueError(
                 "The number of inputs must be equal to the number of weights minus 1 (the bias)."
             )
-        inputs = [1] + inputs  # add a neutral weight for the bias for easy computation
+        # add a neutral weight for the bias for easy computation
+        inputs = [1] + inputs
         return f(sum([i * w for i, w in zip(inputs, self.weights)]))
 
 
@@ -50,8 +50,8 @@ class NeuralNetwork:
         (including input and output layers) and weights.
         """
         self._validate(topology, weights)
-
         self.network: List[List[Neuron]] = []
+        self.weights = weights
 
         used_weights: int = 0
         for prev_layer_size, cur_layer_size in zip(topology[:-1], topology[1:]):
@@ -59,7 +59,7 @@ class NeuralNetwork:
             layer: List[Neuron] = [
                 Neuron(
                     weights[
-                        used_weights + n * synapses_per_neuron : used_weights
+                        used_weights + n * synapses_per_neuron: used_weights
                         + (n + 1) * synapses_per_neuron
                     ]
                 )
@@ -84,9 +84,7 @@ class NeuralNetwork:
         ]
 
         if sum(synapses_per_layer) != len(weights):
-            raise ValueError(
-                f"Expected {sum(synapses_per_layer)} weights, got {len(weights)}."
-            )
+            raise ValueError(f"Expected {sum(synapses_per_layer)} weights, got {len(weights)}.")
 
     def predict(self, board: List[List[float]]) -> Tuple[int, int]:
         inputs = [cell for row in board for cell in row]
@@ -107,7 +105,6 @@ class NeuralNetwork:
                 for weight in neuron.weights
             ],
         }
-
         with open(file_path, "w") as f:
             json.dump(model, f)
 
@@ -118,7 +115,6 @@ class NeuralNetwork:
         topology = tuple(model["topology"])
         weights = model["weights"]
         return cls(topology, weights)
-
 
 if __name__ == "__main__":
     print("Running unit tests...")
