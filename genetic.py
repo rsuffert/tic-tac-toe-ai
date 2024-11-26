@@ -173,7 +173,6 @@ def _to_float_board(board: List[List[Player]]) -> List[List[float]]:
     """Converts the board to a list of list of floats."""
     return [[float(cell.value) for cell in row] for row in board]
 
-
 class Population:
     def __init__(self, size: int, topology: Tuple[int, ...]) -> None:
         self.size = size
