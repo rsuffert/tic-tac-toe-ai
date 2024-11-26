@@ -118,10 +118,27 @@ class NeuralNetworkAIPlayer(BaseAIPlayer):
             return self._random_player.play(difficulty, board)
         
         # use neural network to find the best move
-        board_floats: List[List[float]] = [[float(cell.value) for cell in row] for row in board]
+        # need to revert the board because the network has been trained to play as X
+        board_reverted: List[List[Player]] = reverse_board(board)
+
+        board_floats: List[List[float]] = [[float(cell.value) for cell in row] for row in board_reverted]
         row, col = self._network.predict(board_floats)
-        board[row][col] = Player.O
-        return board
+        
+        board_reverted[row][col] = Player.X
+
+        return reverse_board(board_reverted)
+
+def reverse_board(board: List[List[Player]]) -> List[List[Player]]:
+    '''Reverses players of the board.'''
+    return [
+            [
+                Player.X if cell == Player.O 
+                else Player.O if cell == Player.X
+                else Player.EMPTY 
+                for cell in row
+            ] 
+            for row in board
+        ]
 
 def board_to_string(board: List[List[str]]) -> str:
     '''Converts the board to a string.'''
