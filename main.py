@@ -1,14 +1,18 @@
 from typing import List
 from tictactoeutils import Classifier
-from aiplayers import Player, Difficulty, BaseAIPlayer, MinimaxAIPlayer
+from aiplayers import Player, Difficulty, BaseAIPlayer, RandomAIPlayer, MinimaxAIPlayer, NeuralNetworkAIPlayer
+
+# Configurations
+NEURAL_NETWORK_MODEL_FILE: str = "model.json"
 
 # Tic-tac-toe board
 board: List[List[Player]] = [[Player.EMPTY for _ in range(3)] for _ in range(3)]
 difficulty: Difficulty = Difficulty.EASY
+ai_player: BaseAIPlayer = RandomAIPlayer()
 
-def main(ai_player: BaseAIPlayer) -> None:
+def main() -> None:
     '''Entry point for the program.'''
-    global board
+    global board, difficulty, ai_player
     c = Classifier(Player.X.value, Player.O.value, Player.EMPTY.value)
     
     show_menu()
@@ -17,7 +21,11 @@ def main(ai_player: BaseAIPlayer) -> None:
     while result == c.ONGOING:
         flush_terminal()
         show_board()
+
         user_plays()
+        result = c.classify(board_to_string())
+        if result != c.ONGOING: break
+        
         board  = ai_player.play(difficulty, board)
         result = c.classify(board_to_string())
 
@@ -29,7 +37,7 @@ def main(ai_player: BaseAIPlayer) -> None:
 
 def show_menu() -> None:
     '''Displays the main (initial) menu.'''
-    global difficulty
+    global difficulty, ai_player
     print("=========== Welcome to the AI Tic Tac Toe game! ===========")
     print("You are playing as X. The AI is playing as O.")
     print("Please select the difficulty level you would like:")
@@ -48,8 +56,24 @@ def show_menu() -> None:
             break
         except ValueError:
             print("\tInvalid input. Please enter an integer.")
-    
 
+    print("Please select the opponent you will play against:")
+    print("\t1. Random player")
+    print("\t2. Minimax player")
+    print("\t3. Neural network player")
+    while True:
+        try:
+            option = int(input("Your choice: "))
+            if option not in range(1, 4):
+                print("\tInvalid input. Please enter a number between 1 and 3.")
+                continue
+            if option == 1:   ai_player = RandomAIPlayer()
+            elif option == 2: ai_player = MinimaxAIPlayer()
+            else:             ai_player = NeuralNetworkAIPlayer(NEURAL_NETWORK_MODEL_FILE)
+            break
+        except ValueError:
+            print("\tInvalid input. Please enter an integer.")
+    
 def show_board() -> None:
     '''Displays the board.'''
     print("======================= BOARD =======================")
@@ -86,4 +110,4 @@ def flush_terminal() -> None:
     os.system('cls||clear')
 
 if __name__ == '__main__':
-    main(MinimaxAIPlayer())
+    main()
