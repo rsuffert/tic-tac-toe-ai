@@ -115,3 +115,71 @@ class NeuralNetwork:
         topology = tuple(model["topology"])
         weights = model["weights"]
         return cls(topology, weights)
+
+if __name__ == "__main__":
+    print("Running unit tests...")
+
+    def test_neuron():
+        print("============ TESTING NEURON ============")
+        weights = [0.5, -0.6, 0.1]
+        inputs = [1.0, 2.0]
+        neuron = Neuron(weights)
+
+        # Test with logistic function
+        output_logistic = neuron.propagate(inputs, logistic_func)
+        expected_logistic = logistic_func(0.5 * 1 + -0.6 * 1.0 + 0.1 * 2.0)
+        assert (
+            abs(output_logistic - expected_logistic) < 1e-6
+        ), f"Expected {expected_logistic}, got {output_logistic}"
+
+        print("All tests passed.")
+        print("========================================")
+
+    def test_neural_network():
+        print("======== TESTING NEURAL NETWORK ========")
+        topology = (9, 5, 9)
+        weights = [0.1] * 104
+        nn = NeuralNetwork(topology, weights)
+        board = [[0.0] * 3 for _ in range(3)]
+
+        # Test predict function
+        prediction = nn.predict(board)
+        assert (
+            isinstance(prediction, tuple) and len(prediction) == 2
+        ), "Prediction should be a tuple of two integers."
+
+        # Test serialization and deserialization
+        nn.to_file("model.json")
+        nn_loaded = NeuralNetwork.from_file("model.json")
+        assert nn.predict(board) == nn_loaded.predict(
+            board
+        ), "Loaded model should produce the same prediction."
+
+        print("All tests passed.")
+        print("========================================")
+    
+    def test_neural_network_weights_assignment_topology_2_3_2():
+        print("======== TESTING NEURAL NETWORK WEIGHTS ASSIGNMENT FOR TOPOLOGY (2, 3, 2) ========")
+        
+        topology = (2, 3, 2)
+        weights = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7]
+        nn = NeuralNetwork(topology, weights)
+        
+        expected_weights = [
+            [[0.1, 0.2, 0.3], [0.4, 0.5, 0.6], [0.7, 0.8, 0.9]],  # First hidden layer
+            [[1.0, 1.1, 1.2, 1.3], [1.4, 1.5, 1.6, 1.7]]          # Output layer
+        ]
+        
+        for layer_idx, layer in enumerate(nn.network):
+            for neuron_idx, neuron in enumerate(layer):
+                assert neuron.weights == expected_weights[layer_idx][neuron_idx], (
+                    f"Expected weights {expected_weights[layer_idx][neuron_idx]}, "
+                    f"got {neuron.weights} for neuron {neuron_idx} in layer {layer_idx}"
+                )
+        
+        print("All tests passed.")
+        print("========================================")
+
+    test_neuron()
+    test_neural_network()
+    test_neural_network_weights_assignment_topology_2_3_2()
